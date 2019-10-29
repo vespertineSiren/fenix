@@ -4,6 +4,7 @@
 
 package org.mozilla.fenix.ui
 
+import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
 import kotlinx.coroutines.runBlocking
 import mozilla.appservices.places.BookmarkRoot
 import okhttp3.mockwebserver.MockWebServer
@@ -15,8 +16,11 @@ import org.mozilla.fenix.ext.bookmarkStorage
 import org.mozilla.fenix.helpers.AndroidAssetDispatcher
 import org.mozilla.fenix.helpers.HomeActivityTestRule
 import org.mozilla.fenix.helpers.TestAssetHelper
+import org.mozilla.fenix.helpers.TestHelper.longTapSelectItem
+import org.mozilla.fenix.ui.robots.bookmarksMenu
 import org.mozilla.fenix.ui.robots.browserScreen
 import org.mozilla.fenix.ui.robots.homeScreen
+import org.mozilla.fenix.ui.robots.multipleSelectionToolbar
 import org.mozilla.fenix.ui.robots.navigationToolbar
 
 /**
@@ -182,6 +186,131 @@ class BookmarksTest {
         }.openThreeDotMenu {
         }.clickDelete {
             verifyDeleteSnackBarText()
+        }
+    }
+
+    @Test
+    fun multiSelectionToolbarItemsTest() {
+        val defaultWebPage = TestAssetHelper.getGenericAsset(mockWebServer, 1)
+
+        quickActionBar { createBookmark(defaultWebPage.url) }
+
+        navigationToolbar {
+        }.openThreeDotMenu {
+        }.openLibrary {
+        }.openBookmarks {
+            longTapSelectItem(defaultWebPage.url)
+        }
+
+        multipleSelectionToolbar {
+            verifyMultiSelectionCheckmark()
+            verifyMultiSelectionCounter()
+            verifyShareBookmarksButton()
+            verifyCloseToolbarButton()
+        }.closeToolbarReturnToBookmarks {
+            verifyBookmarksMenuView()
+        }
+    }
+
+    @Test
+    fun openSelectionInNewTabTest() {
+        val defaultWebPage = TestAssetHelper.getGenericAsset(mockWebServer, 1)
+
+        quickActionBar { createBookmark(defaultWebPage.url) }
+
+        browserScreen {
+        }.openHomeScreen {
+            closeTab()
+        }.openThreeDotMenu {
+        }.openLibrary {
+        }.openBookmarks {
+            longTapSelectItem(defaultWebPage.url)
+            openActionBarOverflowOrOptionsMenu(activityTestRule.getActivity())
+        }
+
+        multipleSelectionToolbar {
+        }.clickOpenNewTab {
+            verifyExistingTabList()
+            verifyOpenTabsHeader()
+        }
+    }
+
+    @Test
+    fun openSelectionInPrivateTabTest() {
+        val defaultWebPage = TestAssetHelper.getGenericAsset(mockWebServer, 1)
+
+        quickActionBar { createBookmark(defaultWebPage.url) }
+
+        navigationToolbar {
+        }.openThreeDotMenu {
+        }.openLibrary {
+        }.openBookmarks {
+            longTapSelectItem(defaultWebPage.url)
+            openActionBarOverflowOrOptionsMenu(activityTestRule.getActivity())
+        }
+
+        multipleSelectionToolbar {
+        }.clickOpenPrivateTab {
+            verifyExistingTabList()
+            verifyPrivateSessionHeader()
+        }
+    }
+
+    @Test
+    fun deleteMultipleSelectionTest() {
+        val firstWebPage = TestAssetHelper.getGenericAsset(mockWebServer, 1)
+        val secondWebPage = TestAssetHelper.getGenericAsset(mockWebServer, 2)
+
+        quickActionBar { createBookmark(firstWebPage.url) }
+        quickActionBar { createBookmark(secondWebPage.url) }
+
+        navigationToolbar {
+        }.openThreeDotMenu {
+        }.openLibrary {
+        }.openBookmarks {
+            longTapSelectItem(firstWebPage.url)
+            longTapSelectItem(secondWebPage.url)
+            openActionBarOverflowOrOptionsMenu(activityTestRule.getActivity())
+        }
+
+        multipleSelectionToolbar {
+            clickMultiSelectionDelete()
+        }
+
+        bookmarksMenu {
+            verifyEmptyBookmarksList()
+        }
+    }
+
+    @Test
+    fun shareButtonTest() {
+        val defaultWebPage = TestAssetHelper.getGenericAsset(mockWebServer, 1)
+
+        quickActionBar { createBookmark(defaultWebPage.url) }
+
+        navigationToolbar {
+        }.openThreeDotMenu {
+        }.openLibrary {
+        }.openBookmarks {
+            longTapSelectItem(defaultWebPage.url)
+        }
+
+        multipleSelectionToolbar {
+            clickShareBookmarksButton()
+            verifyShareOverlay()
+            verifyShareTabFavicon()
+            verifyShareTabTitle()
+            verifyShareTabUrl()
+        }
+    }
+
+    @Test
+    fun verifyBackNavigation() {
+        homeScreen {
+        }.openThreeDotMenu {
+        }.openBookmarks {
+        }.goBack {
+            verifyHomeScreen()
         }
     }
 }
